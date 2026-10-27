@@ -95,7 +95,7 @@ if submit_button:
 
                 # Calls the Qwen2.5-3B-Instruct serverless endpoint with Alpaca prompt structure
                 response = client.chat_completion(
-                    model="Qwen/Qwen2.5-3B-Instruct",
+                    model="Qwen/Qwen2.5-72B-Instruct",
                     messages=[
                         {
                             "role": "system",
