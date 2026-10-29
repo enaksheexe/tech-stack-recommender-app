@@ -4,7 +4,7 @@ from huggingface_hub import InferenceClient
 # Page Configuration
 st.set_page_config(
     page_title="StackVerse | AI Tech Stack Recommender",
-    page_icon="💻",
+    page_icon="-",
     layout="centered"
 )
 
