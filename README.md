@@ -13,7 +13,7 @@ Instead of relying on generic prompt wrappers around proprietary APIs, I built t
 
 Choosing a tech stack early in a project often defaults to whatever is currently trending rather than what fits the architecture. General-purpose LLMs tend to give overly verbose, non-committal answers when asked for stack recommendations. 
 
-I built this project to solve that by fine-tuning a lightweight 3B parameter model to output structured, practical architecture recommendations—balancing developer velocity, ecosystem maturity, and infrastructure overhead.
+I built this project to solve that by fine-tuning a lightweight 3B parameter model to output structured, practical architecture recommendation balancing developer velocity, ecosystem maturity, and infrastructure overhead.
 
 ---
 
