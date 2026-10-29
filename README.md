@@ -2,6 +2,9 @@
 
 **Live Demo:** [https://stackverse.streamlit.app/](https://stackverse.streamlit.app/)  
 **Fine-Tuned Model:** [`Enaksheexe/stackverse-llm`](https://huggingface.co/Enaksheexe/stackverse-llm)
+**Goggle Colab link**
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1ZG8qniX9LqgMO1hTtS3OCrNUMgiCK7eC)
+
 
 StackVerse is a specialized recommendation tool designed to help developers select the right frontend, backend, database, and deployment tools based on specific project requirements, constraints, and scalability targets. 
 
