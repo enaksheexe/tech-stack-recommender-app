@@ -31,4 +31,16 @@ I fine-tuned the base `Qwen/Qwen2.5-3B` model to create [`Enaksheexe/stackverse-
 
 ## Tech Stack
 
-* **Model:** `Enaksheexe/stackverse-llm` (Fine-tuned Qwen
+* **Model:** `Enaksheexe/stackverse-llm` (Fine-tuned Qwen 2.5 3B)
+* **ML / Training:** Unsloth, PyTorch, Hugging Face `transformers`, `TRL`, `PEFT`, Google Colab
+* **Frontend & Serving:** Streamlit (Python)
+* **Deployment:** Streamlit Community Cloud
+
+---
+
+## Running Locally
+
+### 1. Clone the repository
+```bash
+git clone [https://github.com/enaksheexe/tech-stack-recommender-app.git](https://github.com/enaksheexe/tech-stack-recommender-app.git)
+cd tech-stack-recommender-app
