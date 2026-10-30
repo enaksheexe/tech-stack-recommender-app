@@ -41,6 +41,18 @@ I fine-tuned the base `Qwen/Qwen2.5-3B` model to create [`Enaksheexe/stackverse-
 * **Deployment:** Streamlit Community Cloud
 
 ---
+``mermaid
+flowchart TD
+    A[User Opens Streamlit UI] --> B[User Selects 4 Hard Constraints:\nCategory, Budget, Team Size, Timeline]
+    B --> C[User Enters Specific Project Description]
+    C --> D[User Clicks 'Generate Stack' Button]
+    D --> E[Backend Validates Inputs & Constructs Structured Prompt]
+    E --> F[Inference Request Sent to Enaksheexe/stackverse-llm]
+    F --> G[Model Generates Frontend, Backend, DB & Hosting Stack]
+    G --> H[Streamlit Parses Response & Renders Architecture Breakdown]
+
+
+---
 
 ## Running Locally
 
@@ -48,3 +60,4 @@ I fine-tuned the base `Qwen/Qwen2.5-3B` model to create [`Enaksheexe/stackverse-
 ```bash
 git clone [https://github.com/enaksheexe/tech-stack-recommender-app.git](https://github.com/enaksheexe/tech-stack-recommender-app.git)
 cd tech-stack-recommender-app
+
