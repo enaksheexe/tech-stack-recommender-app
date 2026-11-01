@@ -3,7 +3,6 @@ import json
 import urllib.request
 import urllib.error
 import streamlit as st
-from huggingface_hub import InferenceClient
 
 # Page Configuration
 st.set_page_config(
@@ -101,7 +100,7 @@ def call_openai_compatible(url, token, model_name, messages):
         data=json.dumps({
             "model": model_name,
             "messages": messages,
-            "max_tokens": 600,
+            "max_tokens": 700,
             "temperature": 0.3
         }).encode("utf-8"),
         headers={
@@ -113,6 +112,32 @@ def call_openai_compatible(url, token, model_name, messages):
     with urllib.request.urlopen(req, timeout=30) as resp:
         data = json.loads(resp.read().decode("utf-8"))
         return data["choices"][0]["message"]["content"]
+
+def get_available_groq_models(token):
+    preferred = [
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "qwen/qwen3.8-27b",
+        "qwen/qwen3-32b",
+        "meta-llama/llama-4-scout-17b-16e-instruct",
+        "meta-llama/llama-4-maverick-17b-128e-instruct"
+    ]
+    try:
+        req = urllib.request.Request(
+            "https://api.groq.com/openai/v1/models",
+            headers={"Authorization": f"Bearer {token}", "User-Agent": "Mozilla/5.0"}
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            live_ids = [
+                m["id"] for m in data.get("data", [])
+                if not any(skip in m["id"].lower() for skip in ["whisper", "guard", "orpheus", "tts", "embed"])
+            ]
+            ordered = [m for m in preferred if m in live_ids]
+            others = [m for m in live_ids if m not in ordered]
+            return ordered + others
+    except Exception:
+        return preferred
 
 if submit_button:
     if not specific_use_case.strip():
@@ -140,10 +165,11 @@ if submit_button:
             result = None
             errors = []
 
-            # Route A: If a Groq key (gsk_...) is present, call Groq directly across active models
+            # Route A: Dynamically fetch and call unlocked Groq models
             active_gsk = groq_key if groq_key else (hf_token if hf_token.startswith("gsk_") else "")
             if active_gsk:
-                for g_model in ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "qwen/qwen3-32b"]:
+                groq_models = get_available_groq_models(active_gsk)
+                for g_model in groq_models:
                     try:
                         result = call_openai_compatible(
                             "https://api.groq.com/openai/v1/chat/completions",
@@ -159,13 +185,13 @@ if submit_button:
                     except Exception as e:
                         errors.append(f"Groq ({g_model}): {e}")
 
-            # Route B: If an HF token (hf_...) is present, use HF Router with automatic provider selection
+            # Route B: Fallback to HF Router
             if not result and hf_token and not hf_token.startswith("gsk_"):
                 hf_router_models = [
+                    "openai/gpt-oss-120b:fastest",
+                    "openai/gpt-oss-20b:fastest",
                     "Qwen/Qwen2.5-7B-Instruct:fastest",
-                    "Qwen/Qwen2.5-72B-Instruct:fastest",
-                    "meta-llama/Llama-3.3-70B-Instruct:fastest",
-                    "meta-llama/Llama-3.1-8B-Instruct:fastest"
+                    "Qwen/Qwen2.5-72B-Instruct:fastest"
                 ]
                 for h_model in hf_router_models:
                     try:
