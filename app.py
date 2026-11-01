@@ -1,6 +1,7 @@
 import os
 import json
 import urllib.request
+import urllib.error
 import streamlit as st
 from huggingface_hub import InferenceClient
 
@@ -20,12 +21,12 @@ default_token = ""
 groq_key = ""
 try:
     if "HF_TOKEN" in st.secrets:
-        default_token = st.secrets["HF_TOKEN"]
+        default_token = str(st.secrets["HF_TOKEN"]).strip()
     if "GROQ_API_KEY" in st.secrets:
-        groq_key = st.secrets["GROQ_API_KEY"]
+        groq_key = str(st.secrets["GROQ_API_KEY"]).strip()
 except Exception:
-    default_token = os.getenv("HF_TOKEN", "")
-    groq_key = os.getenv("GROQ_API_KEY", "")
+    default_token = os.getenv("HF_TOKEN", "").strip()
+    groq_key = os.getenv("GROQ_API_KEY", "").strip()
 
 # Sidebar for Model Info
 with st.sidebar:
@@ -35,10 +36,10 @@ with st.sidebar:
         st.success("API Connected & Ready")
     else:
         hf_token = st.text_input(
-            "API Token",
+            "API Token (HF or Groq)",
             type="password",
-            help="Paste your token in Streamlit Secrets"
-        )
+            help="Paste your hf_... or gsk_... token here or in Streamlit Secrets"
+        ).strip()
         st.markdown("---")
 
     st.markdown(
@@ -94,6 +95,25 @@ Project Category: {category} | Specific Use Case: {use_case} | Team Size: {team}
 ### Response:
 """
 
+def call_openai_compatible(url, token, model_name, messages):
+    req = urllib.request.Request(
+        url,
+        data=json.dumps({
+            "model": model_name,
+            "messages": messages,
+            "max_tokens": 600,
+            "temperature": 0.3
+        }).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0"
+        }
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+        return data["choices"][0]["message"]["content"]
+
 if submit_button:
     if not specific_use_case.strip():
         st.warning("Please describe what your project is before generating a stack!")
@@ -118,57 +138,54 @@ if submit_button:
             ]
 
             result = None
-            last_error = None
+            errors = []
 
-            # 1. If a direct Groq key or gsk_ token is provided, use fast direct endpoint
+            # Route A: If a Groq key (gsk_...) is present, call Groq directly across active models
             active_gsk = groq_key if groq_key else (hf_token if hf_token.startswith("gsk_") else "")
             if active_gsk:
-                try:
-                    req = urllib.request.Request(
-                        "https://api.groq.com/openai/v1/chat/completions",
-                        data=json.dumps({
-                            "model": "llama-3.3-70b-versatile",
-                            "messages": messages,
-                            "max_tokens": 600,
-                            "temperature": 0.3
-                        }).encode("utf-8"),
-                        headers={
-                            "Authorization": f"Bearer {active_gsk}",
-                            "Content-Type": "application/json",
-                            "User-Agent": "StackVerse/1.0"
-                        }
-                    )
-                    with urllib.request.urlopen(req) as resp:
-                        data = json.loads(resp.read().decode("utf-8"))
-                        result = data["choices"][0]["message"]["content"]
-                except Exception as e:
-                    last_error = e
-
-            # 2. Otherwise try Hugging Face Router (works once Groq key is linked in HF Settings)
-            if not result and hf_token and not hf_token.startswith("gsk_"):
-                client = InferenceClient(token=hf_token)
-                models_to_try = [
-                    "meta-llama/Llama-3.3-70B-Instruct",
-                    "Qwen/Qwen2.5-72B-Instruct",
-                    "meta-llama/Llama-3.1-8B-Instruct"
-                ]
-                for model_id in models_to_try:
+                for g_model in ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "qwen/qwen3-32b"]:
                     try:
-                        response = client.chat_completion(
-                            model=model_id,
-                            messages=messages,
-                            max_tokens=600,
-                            temperature=0.3
+                        result = call_openai_compatible(
+                            "https://api.groq.com/openai/v1/chat/completions",
+                            active_gsk,
+                            g_model,
+                            messages
                         )
-                        result = response.choices[0].message.content
-                        break
+                        if result:
+                            break
+                    except urllib.error.HTTPError as e:
+                        err_body = e.read().decode("utf-8", errors="ignore")
+                        errors.append(f"Groq ({g_model}): {e.code} - {err_body}")
                     except Exception as e:
-                        last_error = e
-                        continue
+                        errors.append(f"Groq ({g_model}): {e}")
+
+            # Route B: If an HF token (hf_...) is present, use HF Router with automatic provider selection
+            if not result and hf_token and not hf_token.startswith("gsk_"):
+                hf_router_models = [
+                    "Qwen/Qwen2.5-7B-Instruct:fastest",
+                    "Qwen/Qwen2.5-72B-Instruct:fastest",
+                    "meta-llama/Llama-3.3-70B-Instruct:fastest",
+                    "meta-llama/Llama-3.1-8B-Instruct:fastest"
+                ]
+                for h_model in hf_router_models:
+                    try:
+                        result = call_openai_compatible(
+                            "https://router.huggingface.co/v1/chat/completions",
+                            hf_token,
+                            h_model,
+                            messages
+                        )
+                        if result:
+                            break
+                    except urllib.error.HTTPError as e:
+                        err_body = e.read().decode("utf-8", errors="ignore")
+                        errors.append(f"HF Router ({h_model}): {e.code} - {err_body}")
+                    except Exception as e:
+                        errors.append(f"HF Router ({h_model}): {e}")
 
             if result:
                 st.success("Optimal Tech Stack Generated!")
                 st.markdown("### 🛠️ Recommended Architecture")
                 st.markdown(result)
             else:
-                st.error(f"Error connecting to inference server: {last_error}")
+                st.error("Could not reach inference server. Details:\n\n" + "\n\n".join(errors[:2]))
