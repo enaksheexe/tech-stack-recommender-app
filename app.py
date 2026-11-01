@@ -1,10 +1,11 @@
+import os
 import streamlit as st
 from huggingface_hub import InferenceClient
 
 # Page Configuration
 st.set_page_config(
     page_title="StackVerse | AI Tech Stack Recommender",
-    page_icon="-",
+    page_icon="🛠️",
     layout="centered"
 )
 
@@ -12,15 +13,28 @@ st.set_page_config(
 st.title("StackVerse: AI Tech Stack Architect")
 st.caption("Powered by fine-tuned model: `Enaksheexe/stackverse-llm` | TiesVerse")
 
-# Sidebar for Hugging Face Token & Model Info
+# Automatically load token from Streamlit Secrets or Environment Variables
+default_token = ""
+try:
+    if "HF_TOKEN" in st.secrets:
+        default_token = st.secrets["HF_TOKEN"]
+except Exception:
+    default_token = os.getenv("HF_TOKEN", "")
+
+# Sidebar for Model Info (only asks for token if Secret isn't set)
 with st.sidebar:
-    st.header("Configuration")
-    hf_token = st.text_input(
-        "Hugging Face Read Token",
-        type="password",
-        help="Paste a READ token from huggingface.co/settings/tokens"
-    )
-    st.markdown("---")
+    st.header("Project Details")
+    if default_token:
+        hf_token = default_token
+        st.success("API Connected & Ready")
+    else:
+        hf_token = st.text_input(
+            "Hugging Face Read Token",
+            type="password",
+            help="Paste a READ token from huggingface.co/settings/tokens"
+        )
+        st.markdown("---")
+
     st.markdown(
         "**Fine-Tuned Model:**\n"
         "[Enaksheexe/stackverse-llm](https://huggingface.co/Enaksheexe/stackverse-llm)\n\n"
@@ -60,7 +74,7 @@ with st.form("stack_form"):
         height=100
     )
 
-    submit_button = st.form_submit_button(" Generate Stack", use_container_width=True)
+    submit_button = st.form_submit_button("Generate Stack", use_container_width=True)
 
 # Format Prompt in Alpaca Style
 alpaca_template = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
@@ -78,7 +92,7 @@ if submit_button:
     if not specific_use_case.strip():
         st.warning("Please describe what your project is before generating a stack!")
     elif not hf_token:
-        st.warning("Please enter a Hugging Face Read Token in the left sidebar (or Streamlit Secrets) to run inference.")
+        st.warning("Please add HF_TOKEN in Streamlit Secrets or enter a Hugging Face Read Token in the sidebar.")
     else:
         with st.spinner("Consulting StackVerse AI Architect..."):
             try:
@@ -93,7 +107,6 @@ if submit_button:
                     timeline=timeline
                 )
 
-                # Calls the Qwen2.5-3B-Instruct serverless endpoint with Alpaca prompt structure
                 response = client.chat_completion(
                     model="Qwen/Qwen2.5-7B-Instruct",
                     messages=[
