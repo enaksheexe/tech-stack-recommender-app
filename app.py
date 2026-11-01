@@ -95,35 +95,52 @@ if submit_button:
         st.warning("Please add HF_TOKEN in Streamlit Secrets or enter a Hugging Face Read Token in the sidebar.")
     else:
         with st.spinner("Consulting StackVerse AI Architect..."):
-            try:
-                # Initialize Hugging Face Inference Client
-                client = InferenceClient(token=hf_token)
+            client = InferenceClient(token=hf_token)
 
-                prompt = alpaca_template.format(
-                    category=project_category,
-                    use_case=specific_use_case,
-                    team=team_size,
-                    budget=budget,
-                    timeline=timeline
-                )
+            prompt = alpaca_template.format(
+                category=project_category,
+                use_case=specific_use_case,
+                team=team_size,
+                budget=budget,
+                timeline=timeline
+            )
 
-                response = client.chat_completion(
-                    model="Qwen/Qwen2.5-7B-Instruct",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "You are StackVerse (Enaksheexe/stackverse-llm), an expert Software Architect AI. Always format your response clearly with Recommended Stack (Frontend, Backend, Database, Deployment/Hosting) and concise architectural reasoning."
-                        },
-                        {"role": "user", "content": prompt}
-                    ],
-                    max_tokens=400,
-                    temperature=0.3
-                )
+            messages = [
+                {
+                    "role": "system",
+                    "content": "You are StackVerse (Enaksheexe/stackverse-llm), an expert Software Architect AI. Always format your response clearly with Recommended Stack (Frontend, Backend, Database, Deployment/Hosting) and concise architectural reasoning."
+                },
+                {"role": "user", "content": prompt}
+            ]
 
-                result = response.choices[0].message.content
+            # Try supported serverless models in order so the app never fails
+            models_to_try = [
+                "Qwen/Qwen2.5-72B-Instruct",
+                "Qwen/Qwen2.5-Coder-32B-Instruct",
+                "meta-llama/Llama-3.1-8B-Instruct",
+                "HuggingFaceH4/zephyr-7b-beta"
+            ]
+
+            result = None
+            last_error = None
+
+            for model_id in models_to_try:
+                try:
+                    response = client.chat_completion(
+                        model=model_id,
+                        messages=messages,
+                        max_tokens=500,
+                        temperature=0.3
+                    )
+                    result = response.choices[0].message.content
+                    break
+                except Exception as e:
+                    last_error = e
+                    continue
+
+            if result:
                 st.success("Optimal Tech Stack Generated!")
                 st.markdown("### 🛠️ Recommended Architecture")
                 st.markdown(result)
-
-            except Exception as e:
-                st.error(f"Error connecting to Hugging Face: {e}")
+            else:
+                st.error(f"Error connecting to Hugging Face: {last_error}")
