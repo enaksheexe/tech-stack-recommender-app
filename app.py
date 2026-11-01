@@ -1,4 +1,6 @@
 import os
+import json
+import urllib.request
 import streamlit as st
 from huggingface_hub import InferenceClient
 
@@ -13,25 +15,29 @@ st.set_page_config(
 st.title("StackVerse: AI Tech Stack Architect")
 st.caption("Powered by fine-tuned model: `Enaksheexe/stackverse-llm` | TiesVerse")
 
-# Automatically load token from Streamlit Secrets or Environment Variables
+# Automatically load token from Streamlit Secrets
 default_token = ""
+groq_key = ""
 try:
     if "HF_TOKEN" in st.secrets:
         default_token = st.secrets["HF_TOKEN"]
+    if "GROQ_API_KEY" in st.secrets:
+        groq_key = st.secrets["GROQ_API_KEY"]
 except Exception:
     default_token = os.getenv("HF_TOKEN", "")
+    groq_key = os.getenv("GROQ_API_KEY", "")
 
-# Sidebar for Model Info (only asks for token if Secret isn't set)
+# Sidebar for Model Info
 with st.sidebar:
     st.header("Project Details")
-    if default_token:
+    if default_token or groq_key:
         hf_token = default_token
         st.success("API Connected & Ready")
     else:
         hf_token = st.text_input(
-            "Hugging Face Read Token",
+            "API Token",
             type="password",
-            help="Paste a READ token from huggingface.co/settings/tokens"
+            help="Paste your token in Streamlit Secrets"
         )
         st.markdown("---")
 
@@ -91,12 +97,10 @@ Project Category: {category} | Specific Use Case: {use_case} | Team Size: {team}
 if submit_button:
     if not specific_use_case.strip():
         st.warning("Please describe what your project is before generating a stack!")
-    elif not hf_token:
-        st.warning("Please add HF_TOKEN in Streamlit Secrets or enter a Hugging Face Read Token in the sidebar.")
+    elif not (hf_token or groq_key):
+        st.warning("Please add your token in Streamlit Secrets.")
     else:
         with st.spinner("Consulting StackVerse AI Architect..."):
-            client = InferenceClient(token=hf_token)
-
             prompt = alpaca_template.format(
                 category=project_category,
                 use_case=specific_use_case,
@@ -113,34 +117,58 @@ if submit_button:
                 {"role": "user", "content": prompt}
             ]
 
-            # Try supported serverless models in order so the app never fails
-            models_to_try = [
-                "Qwen/Qwen2.5-72B-Instruct",
-                "Qwen/Qwen2.5-Coder-32B-Instruct",
-                "meta-llama/Llama-3.1-8B-Instruct",
-                "HuggingFaceH4/zephyr-7b-beta"
-            ]
-
             result = None
             last_error = None
 
-            for model_id in models_to_try:
+            # 1. If a direct Groq key or gsk_ token is provided, use fast direct endpoint
+            active_gsk = groq_key if groq_key else (hf_token if hf_token.startswith("gsk_") else "")
+            if active_gsk:
                 try:
-                    response = client.chat_completion(
-                        model=model_id,
-                        messages=messages,
-                        max_tokens=500,
-                        temperature=0.3
+                    req = urllib.request.Request(
+                        "https://api.groq.com/openai/v1/chat/completions",
+                        data=json.dumps({
+                            "model": "llama-3.3-70b-versatile",
+                            "messages": messages,
+                            "max_tokens": 600,
+                            "temperature": 0.3
+                        }).encode("utf-8"),
+                        headers={
+                            "Authorization": f"Bearer {active_gsk}",
+                            "Content-Type": "application/json",
+                            "User-Agent": "StackVerse/1.0"
+                        }
                     )
-                    result = response.choices[0].message.content
-                    break
+                    with urllib.request.urlopen(req) as resp:
+                        data = json.loads(resp.read().decode("utf-8"))
+                        result = data["choices"][0]["message"]["content"]
                 except Exception as e:
                     last_error = e
-                    continue
+
+            # 2. Otherwise try Hugging Face Router (works once Groq key is linked in HF Settings)
+            if not result and hf_token and not hf_token.startswith("gsk_"):
+                client = InferenceClient(token=hf_token)
+                models_to_try = [
+                    "meta-llama/Llama-3.3-70B-Instruct",
+                    "Qwen/Qwen2.5-72B-Instruct",
+                    "meta-llama/Llama-3.1-8B-Instruct"
+                ]
+                for model_id in models_to_try:
+                    try:
+                        response = client.chat_completion(
+                            model=model_id,
+                            messages=messages,
+                            max_tokens=600,
+                            temperature=0.3
+                        )
+                        result = response.choices[0].message.content
+                        break
+                    except Exception as e:
+                        last_error = e
+                        continue
 
             if result:
                 st.success("Optimal Tech Stack Generated!")
                 st.markdown("### 🛠️ Recommended Architecture")
                 st.markdown(result)
             else:
-                st.error(f"Error connecting to Hugging Face: {last_error}")
+                st.error(f"Error connecting to inference server: {last_error}")
