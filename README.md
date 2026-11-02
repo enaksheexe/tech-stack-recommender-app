@@ -1,5 +1,9 @@
 # StackVerse: AI-Powered Tech Stack Recommender
-<img width="1884" height="845" alt="StackVerse UI" src="https://github.com/user-attachments/assets/270d2521-74ab-4d1a-8225-fd632857e0bc" />
+**Demo/Example working model**
+<img width="1848" height="820" alt="image" src="https://github.com/user-attachments/assets/cdcf86f5-f478-498e-accd-b6b72473e25d" />
+<img width="1862" height="815" alt="image" src="https://github.com/user-attachments/assets/bf9b4c2b-3278-471c-8279-f9472d2a6e58" />
+<img width="965" height="673" alt="image" src="https://github.com/user-attachments/assets/e6f3c889-2967-4ee4-a8b7-718b558868fc" />
+
 
 **Live Demo:** [https://stackverse.streamlit.app/](https://stackverse.streamlit.app/)  
 **My Fine-Tuned Model:** [`Enaksheexe/stackverse-llm`](https://huggingface.co/Enaksheexe/stackverse-llm)  
