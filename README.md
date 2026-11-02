@@ -5,7 +5,7 @@
 <img width="965" height="673" alt="image" src="https://github.com/user-attachments/assets/e6f3c889-2967-4ee4-a8b7-718b558868fc" />
 
 
-**Live Demo:** [https://stackverse.streamlit.app/](https://stackverse.streamlit.app/)  
+**Live Demo:(Try it yourself!)** [https://stackverse.streamlit.app/](https://stackverse.streamlit.app/)  
 **My Fine-Tuned Model:** [`Enaksheexe/stackverse-llm`](https://huggingface.co/Enaksheexe/stackverse-llm)  
 **Google Colab Training Notebook:** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1ZG8qniX9LqgMO1hTtS3OCrNUMgiCK7eC)
 
